@@ -23,9 +23,9 @@ import {
   getPendingTransaction,
   clearPendingTransaction,
 } from '@/lib/transaction-persistence';
-import { mapGrailError } from '@/lib/errors';
+import { parseError } from '@/lib/errors';
 import { useDebounce } from '@/hooks/useDebounce';
-import axios from 'axios';
+import { toast } from 'sonner';
 
 const QUOTE_DEBOUNCE_DELAY = 500;
 
@@ -93,11 +93,13 @@ export default function Home() {
       setIsSuccessModalOpen(true);
       clearPendingTransaction();
       setActiveTransactionId(null);
+      toast.success('Gold purchase completed!');
     } else if (txStatusQuery.data.status === 'failed') {
-      setPurchaseError(mapGrailError('TRANSACTION_FAILED'));
+      setPurchaseError(parseError('TRANSACTION_FAILED'));
       setIsFailureModalOpen(true);
       clearPendingTransaction();
       setActiveTransactionId(null);
+      toast.error('Transaction failed');
     }
   }, [txStatusQuery.data]);
 
@@ -124,11 +126,10 @@ export default function Home() {
         savePendingTransaction(result.transaction.txId);
       }
     } catch (err: unknown) {
-      const errorCode = axios.isAxiosError(err)
-        ? err.response?.data?.error || 'PURCHASE_ERROR'
-        : 'PURCHASE_ERROR';
-      setPurchaseError(mapGrailError(errorCode));
+      const errorMessage = parseError(err);
+      setPurchaseError(errorMessage);
       setIsFailureModalOpen(true);
+      toast.error('Purchase failed', { description: errorMessage });
     }
   }, [quoteQuery.data, purchaseMutation]);
 

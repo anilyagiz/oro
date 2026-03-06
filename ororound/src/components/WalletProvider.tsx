@@ -42,10 +42,15 @@ export const WalletProvider: FC<Props> = ({ children }) => {
     []
   );
 
-  const wallets = useMemo(() => [new PhantomWalletAdapter(), new SolflareWalletAdapter()], []);
+  const wallets = useMemo(
+    () => [
+      new PhantomWalletAdapter(),
+      new SolflareWalletAdapter(),
+    ],
+    []
+  );
 
   const onError = useCallback((error: WalletError) => {
-    // Silently handle wallet not found errors
     if (error.name === 'WalletNotReadyError' || error.name === 'WalletNotInstalledError') {
       return;
     }

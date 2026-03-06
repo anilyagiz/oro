@@ -59,7 +59,9 @@ export default function PortfolioPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <main className="flex-1 px-4 pb-8 pt-24 sm:px-6 lg:px-8">
+      <DevnetBanner />
+      <Header />
+      <main id="main-content" className="flex-1 px-4 pb-8 pt-24 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl space-y-8">
           <div className="flex items-center justify-between">
             <div>
