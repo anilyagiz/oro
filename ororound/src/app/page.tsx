@@ -73,8 +73,14 @@ export default function Home() {
 
     createAttemptRef.current = walletAddress;
     createUserMutation.mutate(walletAddress, {
-      onError: () => {
+      onSuccess: () => {
+        toast.success('Wallet connected successfully!');
+      },
+      onError: (error) => {
         createAttemptRef.current = null;
+        toast.error('Failed to initialize', { 
+          description: error.message || 'Please check API configuration' 
+        });
       },
     });
   }, [connected, publicKey, grailUserId, createUserMutation]);
