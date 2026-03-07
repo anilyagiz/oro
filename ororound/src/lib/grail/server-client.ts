@@ -178,16 +178,18 @@ export const serverGrailApi = {
 
   async estimateBuy(goldAmount: number) {
     const client = getServerGrailClient();
-    const response = await client.get('/api/trading/purchases/estimate', {
-      params: { goldAmount },
+    // POST /api/trading/estimate/buy with goldAmount in body
+    const response = await client.post('/api/trading/estimate/buy', {
+      goldAmount,
     });
     return response.data.data;
   },
 
   async estimateSell(goldAmount: number) {
     const client = getServerGrailClient();
-    const response = await client.get('/api/trading/sales/estimate', {
-      params: { goldAmount },
+    // POST /api/trading/estimate/sell with goldAmount in body
+    const response = await client.post('/api/trading/estimate/sell', {
+      goldAmount,
     });
     return response.data.data;
   },

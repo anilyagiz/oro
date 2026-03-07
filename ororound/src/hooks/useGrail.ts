@@ -145,16 +145,32 @@ export function useGoldPrice() {
   });
 }
 
-export function useGoldQuote(paymentAmount: number, enabled: boolean = true) {
+export function useGoldQuote(usdcAmount: number, enabled: boolean = true) {
   const { grailUserId } = useUserStore();
 
   return useQuery({
-    queryKey: ['quote', grailUserId, paymentAmount],
+    queryKey: ['quote', grailUserId, usdcAmount],
     queryFn: async (): Promise<GrailQuote> => {
       if (!grailUserId) throw new Error('User not initialized');
 
+      // First get gold price to calculate goldAmount from USDC
+      const priceResponse = await fetch('/api/oro/trading/price');
+      if (!priceResponse.ok) {
+        throw new Error('Failed to get gold price');
+      }
+      const priceData = await priceResponse.json();
+      const goldPricePerOunce = priceData.data?.pricePerOunce || priceData.data?.goldPricePerOunce;
+      
+      if (!goldPricePerOunce || goldPricePerOunce <= 0) {
+        throw new Error('Invalid gold price');
+      }
+
+      // Calculate gold amount from USDC (approximate)
+      const estimatedGoldAmount = usdcAmount / goldPricePerOunce;
+
+      // Now get exact estimate from API
       const response = await fetch(
-        `/api/oro/trading/estimate-buy?goldAmount=${paymentAmount}`
+        `/api/oro/trading/estimate-buy?goldAmount=${estimatedGoldAmount}`
       );
       if (!response.ok) {
         const error = await response.json();
@@ -162,9 +178,18 @@ export function useGoldQuote(paymentAmount: number, enabled: boolean = true) {
       }
 
       const data = await response.json();
-      return data.data;
+      
+      // Return in expected format
+      return {
+        quoteId: `quote-${Date.now()}`,
+        goldAmount: data.data?.goldAmount || estimatedGoldAmount,
+        goldPrice: goldPricePerOunce,
+        usdcAmount: data.data?.estimatedUsdcAmount || usdcAmount,
+        fee: 0,
+        expiresAt: new Date(Date.now() + 60000).toISOString(),
+      };
     },
-    enabled: enabled && !!grailUserId && paymentAmount > 0,
+    enabled: enabled && !!grailUserId && usdcAmount > 0,
     staleTime: 10 * 1000,
   });
 }
