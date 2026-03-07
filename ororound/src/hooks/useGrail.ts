@@ -72,14 +72,6 @@ export interface GrailTransaction {
   updatedAt: string;
 }
 
-// ─── Helper: SHA-256 Hash ───
-async function sha256(message: string): Promise<string> {
-  const input = new Uint8Array(new TextEncoder().encode(message));
-  const hashBuffer = await crypto.subtle.digest('SHA-256', input);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-}
-
 // ─── User Management ───
 export function useCreateUser() {
   const { setKycHash, setGrailUserId, setCreatedAt } = useUserStore();
@@ -87,7 +79,8 @@ export function useCreateUser() {
 
   return useMutation({
     mutationFn: async (walletAddress: string): Promise<GrailUser> => {
-      const kycHash = await sha256(walletAddress);
+      // Use wallet address directly as kycHash (Grail expects base58 format)
+      const kycHash = walletAddress;
 
       const response = await fetch('/api/oro/users', {
         method: 'POST',
