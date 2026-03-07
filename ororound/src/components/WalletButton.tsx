@@ -2,7 +2,6 @@
 
 import { FC, useState, useEffect } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,20 +11,30 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { ChevronDown, LogOut } from 'lucide-react';
+import { ChevronDown, LogOut, Wallet } from 'lucide-react';
+import { WalletModal } from './WalletModal';
 
 interface Props {
   className?: string;
 }
 
 export const WalletButton: FC<Props> = ({ className }) => {
-  const { publicKey, wallet, disconnect, connecting, connected } = useWallet();
-  const { setVisible } = useWalletModal();
+  const { publicKey, wallet, disconnect, connecting, connected, connect } = useWallet();
   const [mounted, setMounted] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Auto-connect when wallet is selected
+  useEffect(() => {
+    if (wallet && !connected && !connecting) {
+      connect().catch((err) => {
+        console.warn('Auto-connect failed:', err.message);
+      });
+    }
+  }, [wallet, connected, connecting, connect]);
 
   const displayAddress = publicKey
     ? `${publicKey.toBase58().slice(0, 4)}...${publicKey.toBase58().slice(-4)}`
@@ -34,13 +43,14 @@ export const WalletButton: FC<Props> = ({ className }) => {
   if (!mounted) {
     return (
       <Button disabled className={className} variant="default">
-        Select Wallet
+        <Wallet className="mr-2 h-4 w-4" />
+        Connect
       </Button>
     );
   }
 
   // If connected, show dropdown to disconnect
-  if (connected && wallet) {
+  if (connected && wallet && publicKey) {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -53,7 +63,14 @@ export const WalletButton: FC<Props> = ({ className }) => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[200px]">
-          <DropdownMenuLabel>Connected Wallet</DropdownMenuLabel>
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+              <p className="text-sm font-medium">{wallet.adapter.name}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {publicKey.toBase58()}
+              </p>
+            </div>
+          </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive focus:text-destructive cursor-pointer"
@@ -67,15 +84,23 @@ export const WalletButton: FC<Props> = ({ className }) => {
     );
   }
 
-  // If not connected, open the standard Solana wallet modal
+  // If not connected, show connect button that opens modal
   return (
-    <Button
-      disabled={connecting}
-      className={className}
-      variant="default"
-      onClick={() => setVisible(true)}
-    >
-      {connecting ? 'Connecting...' : 'Select Wallet'}
-    </Button>
+    <>
+      <Button
+        disabled={connecting}
+        className={className}
+        variant="default"
+        onClick={() => setIsModalOpen(true)}
+      >
+        <Wallet className="mr-2 h-4 w-4" />
+        {connecting ? 'Connecting...' : 'Connect Wallet'}
+      </Button>
+      
+      <WalletModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+      />
+    </>
   );
 };

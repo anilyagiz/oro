@@ -6,14 +6,11 @@ import {
   WalletProvider as SolanaWalletProvider,
   useWallet,
 } from '@solana/wallet-adapter-react';
-import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { PhantomWalletAdapter } from '@solana/wallet-adapter-phantom';
 import { SolflareWalletAdapter } from '@solana/wallet-adapter-solflare';
 import { clusterApiUrl } from '@solana/web3.js';
 import { WalletError } from '@solana/wallet-adapter-base';
 import { useWalletStore } from '@/store/walletStore';
-
-import '@solana/wallet-adapter-react-ui/styles.css';
 
 interface Props {
   children: ReactNode;
@@ -37,10 +34,15 @@ function WalletStateSync() {
 }
 
 export const WalletProvider: FC<Props> = ({ children }) => {
-  const endpoint = useMemo(
-    () => process.env.NEXT_PUBLIC_SOLANA_RPC_URL || clusterApiUrl('mainnet-beta'),
-    []
-  );
+  const endpoint = useMemo(() => {
+    const rpcUrl = process.env.NEXT_PUBLIC_SOLANA_RPC_URL;
+    if (rpcUrl) return rpcUrl;
+    
+    const network = process.env.NEXT_PUBLIC_SOLANA_NETWORK;
+    if (network === 'devnet') return clusterApiUrl('devnet');
+    if (network === 'testnet') return clusterApiUrl('testnet');
+    return clusterApiUrl('mainnet-beta');
+  }, []);
 
   const wallets = useMemo(
     () => [
@@ -51,19 +53,29 @@ export const WalletProvider: FC<Props> = ({ children }) => {
   );
 
   const onError = useCallback((error: WalletError) => {
-    if (error.name === 'WalletNotReadyError' || error.name === 'WalletNotInstalledError') {
+    // Silently ignore common non-critical errors
+    const ignoredErrors = [
+      'WalletNotReadyError',
+      'WalletNotInstalledError',
+      'WalletConnectionError',
+    ];
+    
+    if (ignoredErrors.includes(error.name)) {
       return;
     }
-    console.warn('Wallet connection issue:', error.message);
+    
+    console.warn('Wallet error:', error.name, error.message);
   }, []);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <SolanaWalletProvider wallets={wallets} autoConnect={true} onError={onError}>
-        <WalletModalProvider>
-          <WalletStateSync />
-          {children}
-        </WalletModalProvider>
+      <SolanaWalletProvider 
+        wallets={wallets} 
+        autoConnect={true} 
+        onError={onError}
+      >
+        <WalletStateSync />
+        {children}
       </SolanaWalletProvider>
     </ConnectionProvider>
   );
